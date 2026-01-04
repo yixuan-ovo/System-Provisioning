@@ -164,6 +164,9 @@ sudo systemctl status derp
     }
 }
 ```
+### 8. 查看 Tailscale 官网 是否已打开MagicDNS
+
+如果打开,链接设备可以不输入分配的ip,输入设备名称即可(可自行修改名称)
 
 ## 四、客户端验证与压力测试
 
