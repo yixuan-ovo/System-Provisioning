@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # 1. Uptime Kuma（host 网络，无法端口绑定）
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: always
+    network_mode: "host"
+    environment:
+      - PORT=12861
+    volumes:
+      - ./data/uptime-kuma:/app/data
+    # 说明：
+    # host 模式下端口监听由程序决定
+    # 建议后续通过防火墙限制 12861 仅 Tailscale 访问
+
+  # 2. FileCodeBox
+  filecodebox:
+    image: lanol/filecodebox:latest
+    container_name: filecodebox
+    restart: always
+    volumes:
+      - ./data/filecodebox:/app/data
+    ports:
+      - "100.96.63.22:26861:12345"
+
+  # 3. Excalidraw
+  excalidraw:
+    image: excalidraw/excalidraw:latest
+    container_name: excalidraw
+    restart: always
+    ports:
+      - "100.96.63.22:23971:80"
+
+  # 4. Sun-Panel（唯一全监听入口）
+  sun-panel:
+    image: "hslr/sun-panel:latest"
+    container_name: sun-panel
+    restart: always
+    ports:
+      - "80:3002"
+    volumes:
+      - ./data/sun-panel/conf:/app/conf
+      - ./data/sun-panel/uploads:/app/uploads
+      - ./data/sun-panel/database:/app/database
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # 5. Glances（host 网络）
+  glances:
+    image: nicolargo/glances:latest
+    container_name: glances
+    restart: always
+    pid: host
+    network_mode: "host"
+    environment:
+      - "GLANCES_OPT=-w"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # 默认监听 61208，同样建议用防火墙控制
+
+  # 6. SyncTV
+  synctv:
+    image: synctvorg/synctv:latest
+    container_name: synctv
+    restart: always
+    ports:
+      - "100.96.63.22:23862:8080"
+    volumes:
+      - ./synctv:/app/data
+
+  # 7. Alist
+  alist:
+    image: 'xhofe/alist:latest'
+    container_name: alist
+    restart: always
+    volumes:
+      - './data/alist:/opt/alist/data'
+    ports:
+      - "100.96.63.22:5244:5244"
+    environment:
+      - PUID=0
+      - PGID=0
+      - UMASK=022
