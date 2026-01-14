@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   # 1. Uptime Kuma（host 网络，无法端口绑定）
   uptime-kuma:
-    image: louislam/uptime-kuma:1
+    image: louislam/uptime-kuma:2
     container_name: uptime-kuma
     restart: always
     network_mode: "host"

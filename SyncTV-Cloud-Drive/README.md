@@ -112,6 +112,18 @@ docker compose logs -f
 docker compose logs -f synctv
 ```
 
+### 更新images镜像
+```bash
+# 根据dockercompose更新
+docker compose pull
+
+# 更新完重新启动
+docker compose up -d
+
+# 删除旧镜像
+docker image prune -f
+```
+
 ---
 
 ## 4. 服务说明
