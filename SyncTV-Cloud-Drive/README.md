@@ -64,12 +64,13 @@ mkdir -p data/alist
 mkdir -p data/sun-panel/conf
 mkdir -p data/sun-panel/uploads
 mkdir -p data/sun-panel/database
-mkdir -p synctv
+mkdir -p data/synctv
+mkdir -p data/kiss-worker
 ```
 
 ### 修改配置（如需要）
 
-如果使用 Tailscale，请确保 `docker-compose.yml` 中的 IP 地址（`100.96.63.22`）与你的 Tailscale IP 一致。
+如果使用 Tailscale，请确保 `docker-compose.yml` 中的 IP 地址与你的 Tailscale IP 一致。
 
 查看 Tailscale IP：
 
@@ -139,6 +140,7 @@ docker image prune -f
 | **Glances** | 61208 | 系统监控 | `http://[IP]:61208` |
 | **SyncTV** | 23862 | 同步播放 | `http://[IP]:23862` |
 | **Alist** | 5244 | 文件管理 | `http://[IP]:5244` |
+| **Kiss-worker** | 22263 | 翻译同步配置服务 | `http://[IP]:22263` |
 
 > **注意**：
 > - `[IP]` 为你的 Tailscale IP 或服务器公网 IP

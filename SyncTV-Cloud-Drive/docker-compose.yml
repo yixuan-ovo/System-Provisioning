@@ -21,7 +21,7 @@ services:
     volumes:
       - ./data/filecodebox:/app/data
     ports:
-      - "100.96.63.22:26861:12345"
+      - "tailscale_ip:26861:12345"
 
   # 3. Excalidraw
   excalidraw:
@@ -29,7 +29,7 @@ services:
     container_name: excalidraw
     restart: always
     ports:
-      - "100.96.63.22:23971:80"
+      - "tailscale_ip:23971:80"
 
   # 4. Sun-Panel（唯一全监听入口）
   sun-panel:
@@ -63,9 +63,9 @@ services:
     container_name: synctv
     restart: always
     ports:
-      - "100.96.63.22:23862:8080"
+      - "tailscale_ip:23862:8080"
     volumes:
-      - ./synctv:/app/data
+      - ./data/synctv:/app/data
 
   # 7. Alist
   alist:
@@ -75,8 +75,21 @@ services:
     volumes:
       - './data/alist:/opt/alist/data'
     ports:
-      - "100.96.63.22:5244:5244"
+      - "tailscale_ip:5244:5244"
     environment:
       - PUID=0
       - PGID=0
       - UMASK=022
+
+  # 8. Kiss-worker
+  kiss-worker:
+    image: fishjar/kiss-worker
+    container_name: kiss-worker
+    environment:
+      PORT: 
+      APP_KEY:  # 修改这里的密码
+      APP_DATAPATH: data
+    ports:
+      - 22263:8080
+    volumes:
+      - ./data/kiss-worker:/app/data
