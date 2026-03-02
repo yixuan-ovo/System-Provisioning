@@ -1,0 +1,50 @@
+services:
+  # B站弹幕转发服务（无deploy/resources，无报错）
+  ps5-bilibili-danmaku:
+    build: .
+    image: ps5-danmaku:v1
+    container_name: ps5-Danmaku
+    restart: always
+    ports:
+      - "15500:5000/tcp"
+      - "6667:17667/tcp"
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    environment:
+      - CONFIG_FILE=/app/data/config.json
+      - PYTHONUNBUFFERED=1
+      - PYTHONIOENCODING=utf-8
+      - LC_ALL=C.UTF-8
+      - LANG=C.UTF-8
+      - PYTHONWARNINGS=ignore::urllib3.connectionpool:UserWarning
+      - URLLIB3_LOG_LEVEL=CRITICAL
+      - LOG_LEVEL=INFO
+      - TZ=Asia/Shanghai
+
+  # ps5living服务推流
+  ps5living:
+    image: bao3/playstation
+    container_name: ps5living-bao3
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./data/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "17890:80/tcp"
+      - "1935:1935/tcp"
+
+  # DNS重定向与Web管理
+  dnsmasq:
+    image: jpillora/dnsmasq
+    container_name: ps5living-dnsmasq
+    restart: always
+    volumes:
+      - ./data/dnsmasq.conf:/etc/dnsmasq.conf:ro
+    ports:
+      - "53:53/udp"
+      - "18081:8080/tcp"
+    environment:
+      - HTTP_USER=ytq
+      - HTTP_PASS=123456

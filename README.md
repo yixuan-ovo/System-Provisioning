@@ -7,7 +7,7 @@
 ```
 System-Provisioning/
 ├── Kodi/                 # Kodi 媒体中心配置（连接 Jellyfin）
-├── ps5_twittch/          # PS5 Twitch 推流到 B站配置
+├── ps5_twittch/          # PS5 Twitch 推流到 B站配置+ps5显示B站弹幕
 ├── TailScale/            # Tailscale + 私有 DERP 高性能组网
 ├── Ubuntu_Server/         # Ubuntu 服务器标准加固与部署
 ├── WireGuard/            # WireGuard VPN 配置教程
@@ -80,11 +80,14 @@ Ubuntu 服务器的安全加固和标准化部署流程。
 
 通过 Docker 实现 PS5 Twitch 推流自动转发到 B站直播。
 
+并且获取B站直播间的弹幕展示在ps5
+
 **主要功能：**
 - PS5 Twitch 推流捕获
 - 自动转发到 B站
 - DNS 劫持实现透明转发
-- Docker 容器化部署
+- Docker Compose容器化部署
+- 在ps5展示弹幕
 
 **相关文档：**
 - [PS5 Twitch 推流到 B站配置教程](./ps5_twittch/bao3playstation.md)
