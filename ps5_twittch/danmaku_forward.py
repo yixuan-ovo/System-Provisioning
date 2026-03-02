@@ -22,8 +22,8 @@ CONFIG_FILE = os.getenv("CONFIG_FILE", "config.json")
 # 所有可配置项的默认值（覆盖全部功能）
 DEFAULT_CONFIG = {
     "WEB_PORT": 5000,
-    "BILIBILI_ROOM_ID": 8976628,
-    "TWITCH_CHANNEL": "yixuan5957",
+    "BILIBILI_ROOM_ID": B站直播间ID,
+    "TWITCH_CHANNEL": "teittch用户名",
     "IRC_HOST": "0.0.0.0",
     "IRC_PORT": 17667,
     "DANMAKU_POLL_INTERVAL": 3,
@@ -216,16 +216,27 @@ class IRCClient:
             ping_arg = parts[1] if len(parts) >= 2 else "tmi.twitch.tv"
             await self.send_safe(f"PONG :{ping_arg}")
 
+        elif cmd == "PONG":
+            # PS5响应服务端心跳即可，last_active已在函数开头刷新
+            return
+
     async def run(self):
         """客户端主循环"""
+        heartbeat_interval = max(15, min(60, int(CONFIG["HEARTBEAT_TIMEOUT"]) // 4))
         try:
             while self.check_alive():
-                data = await self.reader.readline()
-                if not data: 
-                    break
-                line = data.decode('utf-8', errors='ignore').strip()
-                if line:
-                    await self.handle_message(line)
+                try:
+                    # 空闲一段时间后主动发PING，避免长时间无弹幕导致误超时
+                    data = await asyncio.wait_for(self.reader.readline(), timeout=heartbeat_interval)
+                    if not data:
+                        break
+                    line = data.decode('utf-8', errors='ignore').strip()
+                    if line:
+                        await self.handle_message(line)
+                except asyncio.TimeoutError:
+                    if not self.check_alive():
+                        break
+                    await self.send_safe("PING :tmi.twitch.tv")
         except Exception as e:
             logger.error(f"PS5({self.peername}) 连接异常: {e}")
         finally:
