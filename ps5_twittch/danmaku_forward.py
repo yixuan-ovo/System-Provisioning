@@ -124,20 +124,22 @@ class IRCClient:
         return True
 
     async def send_safe(self, data):
-        """安全发送数据到PS5"""
-        if not self.check_alive(): 
-            return
+        """安全发送数据到PS5，返回是否发送成功"""
+        if not self.check_alive():
+            return False
         if not data.endswith("\r\n"): 
             data += "\r\n"
         try:
             self.writer.write(data.encode('utf-8'))
             await self.writer.drain()
             self.last_active = datetime.now()
+            return True
         except Exception as e:
             self.is_alive = False
             if self.peername in ACTIVE_CONNECTIONS: 
                 ACTIVE_CONNECTIONS.discard(self.peername)
             logger.error(f"发送数据到PS5({self.peername})失败: {e}")
+            return False
 
     async def auto_join_channel(self):
         """自动加入指定IRC频道"""
@@ -300,8 +302,11 @@ class IRCServer:
         
         # 构造Twitch格式的弹幕消息
         msg = f":{user}!{user}@tmi.twitch.tv PRIVMSG {target} :{text}"
-        await client.send_safe(msg)
-        logger.info(f"转发弹幕 [{user}]: {text}")
+        sent_ok = await client.send_safe(msg)
+        if sent_ok:
+            logger.info(f"转发弹幕 [{user}]: {text}")
+        else:
+            logger.warning(f"转发失败（连接不可用）[{user}]: {text}")
 
 # ===================== B站弹幕抓取（核心修复SEEN_DANMAKU_RND）=====================
 # 全局Session，复用连接
