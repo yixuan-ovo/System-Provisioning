@@ -67,29 +67,29 @@ services:
     volumes:
       - ./data/synctv:/app/data
 
-  # 7. Alist
-  alist:
-    image: 'xhofe/alist:latest'
-    container_name: alist
-    restart: always
-    volumes:
-      - './data/alist:/opt/alist/data'
-    ports:
-      - "tailscale_ip:5244:5244"
-    environment:
-      - PUID=0
-      - PGID=0
-      - UMASK=022
+  # # 7. Alist
+  # alist:
+  #   image: 'xhofe/alist:latest'
+  #   container_name: alist
+  #   restart: always
+  #   volumes:
+  #     - './data/alist:/opt/alist/data'
+  #   ports:
+  #     - "tailscale_ip:5244:5244"
+  #   environment:
+  #     - PUID=0
+  #     - PGID=0
+  #     - UMASK=022
 
-  # 8. Kiss-worker
-  kiss-worker:
-    image: fishjar/kiss-worker
-    container_name: kiss-worker
+  # 7. webdav同步配置
+  webdav:
+    image: bytemark/webdav
+    container_name: webdav
     environment:
-      PORT: 
-      APP_KEY:  # 修改这里的密码
-      APP_DATAPATH: data
+      - AUTH_TYPE=Basic
+      - USERNAME=xxx      # 替换成你的用户名
+      - PASSWORD=xxx  # 替换成你的密码
     ports:
-      - 22263:8080
+      - 22263:80
     volumes:
-      - ./data/kiss-worker:/app/data
+      - ./data/webdav:/var/lib/dav

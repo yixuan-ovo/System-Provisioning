@@ -60,12 +60,11 @@ docker compose version
 # 创建数据目录
 mkdir -p data/uptime-kuma
 mkdir -p data/filecodebox
-mkdir -p data/alist
 mkdir -p data/sun-panel/conf
 mkdir -p data/sun-panel/uploads
 mkdir -p data/sun-panel/database
 mkdir -p data/synctv
-mkdir -p data/kiss-worker
+mkdir -p data/webdav
 ```
 
 ### 修改配置（如需要）
@@ -139,8 +138,7 @@ docker image prune -f
 | **Sun-Panel** | 80 | 管理面板 | `http://[IP]` |
 | **Glances** | 61208 | 系统监控 | `http://[IP]:61208` |
 | **SyncTV** | 23862 | 同步播放 | `http://[IP]:23862` |
-| **Alist** | 5244 | 文件管理 | `http://[IP]:5244` |
-| **Kiss-worker** | 22263 | 翻译同步配置服务 | `http://[IP]:22263` |
+| **WebDAV** | 22263 | WebDAV 文件服务（bytemark/webdav） | `http://[IP]:22263` |
 
 > **注意**：
 > - `[IP]` 为你的 Tailscale IP 或服务器公网 IP
@@ -159,11 +157,11 @@ docker image prune -f
 
 ---
 
-## 6. 本地 Alist 服务配置
+## 6. 本地 Alist 服务配置（通过 Tailscale 挂载到服务器）
 
 ### 安装本地 Alist（Windows）
 
-如果需要在本地挂载 Alist 服务，将本地影音文件交给 SyncTV 播放：
+如果需要把本地影音文件提供给服务器端 SyncTV 播放，可在本机安装 Alist，再通过 Tailscale 内网地址让服务器访问：
 
 ```bash
 # 使用 nssm 安装 Alist 为 Windows 服务
@@ -177,7 +175,7 @@ docker image prune -f
 3. 添加存储，选择本地路径
 4. 配置媒体文件夹路径（例如：`D:\Movies`）
 
-### 在 SyncTV 中添加本地资源
+### 在服务器端 SyncTV 中挂载本地 Alist
 
 1. **进入 SyncTV 房间**
    - 访问 `http://[服务器IP]:23862`
@@ -185,9 +183,14 @@ docker image prune -f
 
 2. **添加 WebDAV 资源**
    - 点击 "添加视频" → 选择 "WebDAV"
-   - **服务器地址**: `http://[你的Tailscale地址]:5244`
+   - **服务器地址**: `http://[你的本机Tailscale地址]:5244`
    - **路径**: `/local`（或你在 Alist 中配置的路径）
    - 如果需要认证，输入 Alist 的用户名和密码
+
+> 说明：
+> - 本地 Alist 运行在你的个人设备上（例如 Windows）
+> - 服务器通过 Tailscale 访问该 Alist，因此无需把本地服务暴露到公网
+> - 该方式等价于把本地媒体库“挂载”给服务器端应用使用
 
 ---
 
@@ -268,7 +271,7 @@ docker compose logs
 
 # 查看特定服务日志
 docker compose logs synctv
-docker compose logs alist
+docker compose logs webdav
 
 # 实时跟踪日志
 docker compose logs -f synctv
