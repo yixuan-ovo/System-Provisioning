@@ -65,6 +65,8 @@ mkdir -p data/sun-panel/uploads
 mkdir -p data/sun-panel/database
 mkdir -p data/synctv
 mkdir -p data/webdav
+mkdir -p data/kula
+chmod 755 -R data/
 ```
 
 ### 修改配置（如需要）
@@ -136,7 +138,7 @@ docker image prune -f
 | **FileCodeBox** | 26861 | 文件分享 | `http://[IP]:26861` |
 | **Excalidraw** | 23971 | 在线绘图 | `http://[IP]:23971` |
 | **Sun-Panel** | 80 | 管理面板 | `http://[IP]` |
-| **Glances** | 61208 | 系统监控 | `http://[IP]:61208` |
+| **Kula** | 61208 | 系统监控 | `http://[IP]:61208` |
 | **SyncTV** | 23862 | 同步播放 | `http://[IP]:23862` |
 | **WebDAV** | 22263 | WebDAV 文件服务（bytemark/webdav） | `http://[IP]:22263` |
 
