@@ -35,9 +35,11 @@
 
 ## 2) 修改 3 个关键配置文件（必须）
 
-1. `data/config.json`  
+1. `data/config.json`（弹幕服务 V2：WebSocket + 扫码登录，配置挂载在 `/app/config.json`）  
    - `BILIBILI_ROOM_ID`：改成你的 B 站直播间 ID。  
    - `TWITCH_CHANNEL`：改成你要给 PS5 使用的频道名（建议只用英文/数字/下划线）。  
+   - `IRC_PORT` 保持 `17667`（与端口映射 `6667:17667` 一致）。  
+   - 登录态保存在 `data/bili_cookies.json`，也可在 Web `http://<IP>:15500/` 扫码。  
 
 2. `data/dnsmasq.conf`  
    - 把下面两个地址都改成你的电脑局域网 IP：  
@@ -51,7 +53,9 @@
 ## 3) 启动容器
 
 - 在 `ps5_twittch` 目录执行：
-  - `docker compose up -d --build`
+  - 全量：`docker compose up -d --build`
+  - 仅重建弹幕：`docker compose up -d --build ps5-bilibili-danmaku`
+- Web 保存配置后需重启弹幕容器：`docker compose restart ps5-bilibili-danmaku`
 - 成功标志：
   - `docker compose ps` 里 `ps5-bilibili-danmaku`、`ps5living`、`dnsmasq` 都是 `Up` 状态。
 

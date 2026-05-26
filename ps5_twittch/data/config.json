@@ -1,11 +1,19 @@
 {
     "WEB_PORT": 5000,
-    "BILIBILI_ROOM_ID": B站直播间ID,
-    "TWITCH_CHANNEL": "twittch用户名",
+    "BILIBILI_ROOM_ID": "直播间ID",
+    "TWITCH_CHANNEL": "twitch用户名",
     "IRC_HOST": "0.0.0.0",
     "IRC_PORT": 17667,
-    "DANMAKU_POLL_INTERVAL": 3,
     "MAX_SEEN_DANMAKU": 1000,
+    "MAX_SEEN_GIFT": 500,
     "HEARTBEAT_TIMEOUT": 300,
-    "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "ENABLE_GIFT": true,
+    "MAX_LOG_ITEMS": 50,
+    "BILIBILI_SESSDATA": "",
+    "BILIBILI_BILI_JCT": "",
+    "BILIBILI_UID": 0,
+    "BILIBILI_UNAME": "",
+    "RECONNECT_DELAY": 5,
+    "ROOM_HISTORY": []
 }

@@ -1,45 +1,33 @@
-# 推荐用Python官方镜像（Debian基础，稳定无兼容问题）
 FROM python:3.12-slim
 
-# 设置工作目录
 WORKDIR /app
 
-# ===== 核心修复：适配不同镜像的源修改逻辑 =====
-# 先判断文件是否存在，不存在则跳过（避免报错）
-RUN if [ -f /etc/apt/sources.list ]; then \
+# 国内 apt 镜像（兼容 debian.sources / sources.list）
+RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i 's|http://deb.debian.org/debian|https://mirrors.tuna.tsinghua.edu.cn/debian|g' /etc/apt/sources.list.d/debian.sources && \
+        sed -i 's|http://security.debian.org|https://mirrors.tuna.tsinghua.edu.cn/debian-security|g' /etc/apt/sources.list.d/debian.sources; \
+    elif [ -f /etc/apt/sources.list ]; then \
         sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
         sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list; \
-    elif [ -f /etc/apk/repositories ]; then \
-        sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories; \
     fi
 
-# 安装依赖（精简版，仅保留必要组件）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        net-tools \
-        procps \
-        && rm -rf /var/lib/apt/lists/*
+        curl \
+        gcc \
+        python3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# 安装Python依赖
 COPY requirements.txt .
-RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
-        flask \
-        requests \
-        asyncio \
-        urllib3
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
-# 复制应用代码
-COPY . .
+COPY danmaku_forward.py .
 
-# 创建日志目录
 RUN mkdir -p /app/logs && chmod 777 /app/logs
 
-# 暴露端口（5000 Web，17667 IRC）
 EXPOSE 5000 17667
 
-# 设置时区
 ENV TZ=Asia/Shanghai
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONIOENCODING=utf-8
 
-# 启动命令
 CMD ["python", "danmaku_forward.py"]
