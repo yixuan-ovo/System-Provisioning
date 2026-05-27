@@ -1,7 +1,7 @@
 {
     "WEB_PORT": 5000,
-    "BILIBILI_ROOM_ID": "直播间ID",
-    "TWITCH_CHANNEL": "twitch用户名",
+    "BILIBILI_ROOM_ID": "BILIBILI_ROOM_ID",
+    "TWITCH_CHANNEL": "TWITCH_CHANNEL",
     "IRC_HOST": "0.0.0.0",
     "IRC_PORT": 17667,
     "MAX_SEEN_DANMAKU": 1000,

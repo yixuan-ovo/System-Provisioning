@@ -43,8 +43,8 @@ services:
     volumes:
       - ./data/dnsmasq.conf:/etc/dnsmasq.conf:ro
     ports:
-      - "53:53/udp"
-      - "18081:8080/tcp"
+      - "192.168.7.168:53:53/udp"     # 只在宿主机局域网IP上监听DNS
+      - "192.168.7.168:18081:8080/tcp" # Web管理界面也只对局域网开放
     environment:
       - HTTP_USER=ytq
       - HTTP_PASS=123456
