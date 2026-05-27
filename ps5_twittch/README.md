@@ -17,6 +17,18 @@
 
 # 详细使用方法（按步骤照做）
 
+## 网络环境（二选一）
+
+本项目的核心仍是：**用本机 `dnsmasq` 把 Twitch 相关域名解析到 Docker 所在电脑**，再由容器完成 RTMP 转推与弹幕 IRC 桥接。  
+下面两种网络方式都已跑通，请按你的实际环境选一种；**步骤 1～4、6～7 两种方案相同**，差别主要在 **步骤 5**。
+
+| 方案 | 适用场景 | 外网/代理由谁处理 |
+|------|----------|-------------------|
+| **A：ImmortalWrt 路由器** | 家庭路由器已刷 ImmortalWrt，并做过 DNS/透明代理等配置（本文最初编写与长期验证环境） | 路由器侧统一处理 |
+| **B：Clash Verge + PS5 系统代理** | 无 ImmortalWrt，在 **跑着 Docker 的 Windows 电脑** 上用 Clash Verge 出境 | Clash 局域网代理 + PS5 填代理 |
+
+---
+
 ## 0) 先理解这套方案在做什么
 
 - PS5 直播时会连接 Twitch 的 RTMP 与 IRC。  
@@ -71,12 +83,49 @@
 
 - `docker compose logs -f ps5-bilibili-danmaku`
 
-## 5) 配置 PS5 网络（重点）
+## 5) 配置 PS5 网络（重点，按所选方案操作）
+
+两种方案都需要：**PS5 能连上 Docker 电脑**，且 **DNS 指向 Docker 所在电脑的局域网 IP**（让 `live-video.net`、`irc.twitch.tv` 解析到本机 `dnsmasq`）。  
+在 PS5「设置 → 网络 → 设定互联网连接」中，建议为 PS5 配置固定 IP（或与路由器 DHCP 保留一致），并记下该 IP。
+
+### 5A) 方案 A：ImmortalWrt 家庭路由器环境
 
 - 让 PS5 使用能访问到本机 `dnsmasq` 的 DNS。常见做法二选一：  
-  - 在路由器里把局域网 DNS 指向你的电脑 IP；  
-  - 或在 PS5 网络设置里手动把 DNS 填成你的电脑 IP。  
+  - 在 ImmortalWrt / 路由器里把局域网 DNS 指向你的电脑 IP；  
+  - 或在 PS5 网络设置里**手动把 DNS 填成 Docker 电脑的局域网 IP**（主、备 DNS 可都填同一地址）。  
+- **不需要**在 PS5 里再开「代理服务器」（由路由器侧处理出境即可）。  
 - 配完 DNS 后，建议 PS5 断网重连一次，确保新 DNS 生效。
+
+### 5B) 方案 B：Clash Verge + PS5 系统代理（已验证可正常推流）
+
+适用于：没有 ImmortalWrt，只在 **开着 Docker 的那台 Windows** 上跑 Clash Verge。
+
+#### 5B-1) Clash Verge（Docker 所在电脑）
+
+在 Clash Verge 中建议如下（与「系统代理 / 虚拟网卡」方案区分开）：
+
+| 项 | 建议设置 |
+|----|----------|
+| 系统代理 | **关闭** |
+| 虚拟网卡（TUN） | **关闭** |
+| 局域网连接 / 允许局域网（Allow LAN） | **开启** |
+| 代理模式 | **全局**（Global） |
+| 节点 | 选中一个**可用**节点 |
+
+在 Clash Verge「设置」里查看并记下 **混合端口** 或 **HTTP 代理端口**（不同版本名称略有差异，常见为 `7897`，**以你本机界面显示为准**）。  
+同时确认 Windows 防火墙允许该端口的**局域网入站**（否则 PS5 连不上本机 Clash）。
+
+#### 5B-2) PS5 网络
+
+1. **DNS**（与方案 A 相同，必须做）：  
+   - 主 DNS（必要时副 DNS 也）填 **Docker 电脑的局域网 IP**，使 Twitch 域名解析到本机容器。  
+2. **代理服务器**（本方案关键）：  
+   - 在 PS5 同一网络连接里打开 **「使用代理服务器」**；  
+   - **地址**：Clash 所在电脑的局域网 IP（与 Docker 为同一台机器时，即 Docker 电脑 IP）；  
+   - **端口**：Clash Verge 里记下的代理端口（见 5B-1）。  
+3. 保存后建议 PS5 **断网重连** 一次，再进入下一步重开播。
+
+> 说明：方案 B 下 PS5 的出境流量经 Clash 所选节点；Twitch 推流/IRC 相关域名仍由本机 `dnsmasq` 劫持到 Docker，二者配合使用。
 
 ## 6) 在 PS5 重新开播触发重连
 
@@ -96,7 +145,8 @@
 
 ## 注意事项
 
-- 这套方案最依赖 DNS，`dnsmasq.conf` 里的 IP 一旦变了就会失效。  
+- **方案 A** 依赖家庭 ImmortalWrt/路由器侧网络配置；**方案 B** 依赖 Clash 局域网代理与 PS5 代理项填写正确，且 Clash 需保持运行。  
+- 无论哪种方案，都最依赖 DNS：`dnsmasq.conf` 里的 IP 一旦变了就会失效。  
 - 更换网络（有线/Wi-Fi 切换、路由器重启、DHCP 重新分配）后，要重新检查 `data/dnsmasq.conf`。  
 - Windows 防火墙至少放行 `6667/TCP`、`1935/TCP`、`53/UDP`，否则 PS5 可能能开播但无法回显弹幕。  
 - `data/nginx.conf` 含推流 key，`docker-compose.yml` 有管理账号密码，请勿公开上传。  
@@ -184,4 +234,5 @@
 ## 备注
 
 - 日志中 `Invalid -W option ignored...` 属于告警参数格式问题，通常不影响主功能。
-- 若改了局域网（比如从有线切换 Wi-Fi），记得同步更新 `data/dnsmasq.conf` 里的局域网 IP。
+- 若改了局域网（比如从有线切换 Wi-Fi），记得同步更新 `data/dnsmasq.conf` 里的局域网 IP。  
+- **方案 B 排障**：推流异常时先确认 Clash「局域网连接」已开、模式为全局、节点可用，且 PS5 代理地址/端口与 Clash 设置一致；DNS 仍须指向 Docker 电脑 IP。
