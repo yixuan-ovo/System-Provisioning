@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 """
-阿冰没问题（Icenoproblem）PS5 哔哩哔哩 直播系统 V3.0
+阿冰没问题（Icenoproblem） - ytq改 - PS5 哔哩哔哩 直播系统 V3.0
 Windows 10 原生运行版本（无需Docker）
 新增：B站扫码登录，彻底解决风控问题
 优化：直播间历史记录、主播名显示、一键清空
@@ -92,6 +92,7 @@ CONFIG = DEFAULT_CONFIG.copy()
 
 # ==================== 全局状态 ====================
 ACTIVE_CONNECTIONS: Set = set()
+IRC_CLIENT_INFO: Dict[str, dict] = {}  # peername -> {nick, channel, since}
 IRC_RUNNING = False
 WS_RUNNING = False
 DANMAKU_COUNT = 0
@@ -836,7 +837,13 @@ class IRCClient:
         self.last_active = time.time()
         self.auto_joined = False
         self.is_alive = True
-        ACTIVE_CONNECTIONS.add(str(self.peername))
+        peer = str(self.peername)
+        ACTIVE_CONNECTIONS.add(peer)
+        IRC_CLIENT_INFO[peer] = {
+            "nick": "",
+            "channel": f"#{CONFIG['TWITCH_CHANNEL']}",
+            "since": int(time.time()),
+        }
         logger.info(f"PS5 连接建立: {self.peername}")
 
     def check_alive(self) -> bool:
@@ -851,7 +858,9 @@ class IRCClient:
 
     def _mark_dead(self):
         self.is_alive = False
-        ACTIVE_CONNECTIONS.discard(str(self.peername))
+        peer = str(self.peername)
+        ACTIVE_CONNECTIONS.discard(peer)
+        IRC_CLIENT_INFO.pop(peer, None)
 
     async def send_safe(self, data: str):
         if not self.check_alive():
@@ -888,6 +897,9 @@ class IRCClient:
 
         if cmd == "NICK" and len(parts) >= 2:
             self.nick = parts[1]
+            info = IRC_CLIENT_INFO.get(str(self.peername))
+            if info is not None:
+                info["nick"] = self.nick
             logger.info(f"PS5({self.peername}) 昵称: {self.nick}")
             await self.auto_join_channel()
         elif cmd == "USER":
@@ -1473,7 +1485,7 @@ WEB_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>阿冰没问题（Icenoproblem）PS5 哔哩哔哩 直播系统 V3.0</title>
+<title>月七改 - PS5 哔哩哔哩 直播系统 V3.0</title>
 <style>
 /* ===== 内联 Font Awesome 精简版（离线可用，无需 CDN） ===== */
 @font-face{font-family:"FA";font-style:normal;font-weight:900;src:url("data:font/woff2;base64,d09GMgABAAAAAAYwAA0AAAAADEgAAAXbAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbEBwaBmAAg0QRCAqKCIkKCwYAATYCJAMsBCAFgxoHIBuJCmRRVVKlMrI2TmQXf/P9733u3U3T/ZuZ+9693Pu+773c+9sBSGHiapUAEBkUCAdAA8DuTQAGmhJwEQe8oGAHQAMSWvwBWnz99TUd+6OmAlJAoQWqKMIhJO0goTGFwsJCxZmDhEbLuovSVVVVmqjLt+e+iX8n/zX5P/L9q5W3/wuq7O9TH1pCiIgRERIRIiKkmFlxM8J2OJCqE3OGSQ8M3mhEgOCL8IHGagigABIg3jXs0FzXf+u+BNK6nSZJBFJAiwBJBEkCSQIJAokDJAlkCUABAAAAAAAAAAAAAAAAAAAAAAAA") format("woff2");font-display:block}
@@ -1575,18 +1587,20 @@ body{background:linear-gradient(135deg,#0d1117 0%,#161b22 50%,#0d1117 100%);min-
 .tab .badge{background:#30363d;border-radius:10px;padding:1px 7px;font-size:.72rem;color:#8b949e;margin-left:3px}
 .tab.active .badge{background:#7b2ff7;color:#fff}
 .feed-actions{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-.feed-list{list-style:none;overflow-y:auto;max-height:520px;display:flex;flex-direction:column;gap:4px}
+.feed-list{list-style:none;overflow-x:hidden;overflow-y:auto;max-height:520px;display:flex;flex-direction:column;gap:4px}
 .no-item{color:#484f58;text-align:center;padding:40px 20px;font-size:.86rem;line-height:1.6}
-.dm-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:8px;background:rgba(79,140,255,.06);border-left:3px solid #4f8cff;animation:slideIn .25s;transition:all .2s}
-.dm-item:hover{background:rgba(79,140,255,.1);transform:translateX(2px)}
+.dm-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:8px;background:rgba(79,140,255,.06);border-left:3px solid #4f8cff;transition:background .2s}
+.dm-item.dm-item-new{animation:slideIn .25s}
+.dm-item:hover{background:rgba(79,140,255,.12)}
 .dm-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7b2ff7,#4f8cff);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(123,47,247,.3)}
 .dm-body{flex:1;min-width:0}
 .dm-user{font-size:.86rem;font-weight:700;color:#79c0ff;margin-bottom:3px;display:flex;align-items:center;gap:6px}
 .dm-user::before{content:'';width:6px;height:6px;border-radius:50%;background:#4f8cff}
-.dm-text{font-size:.92rem;color:#e6edf3;word-break:break-all;line-height:1.45;padding-left:12px}
+.dm-text{font-size:.92rem;color:#e6edf3;word-break:break-word;overflow-wrap:anywhere;line-height:1.45;padding-left:12px}
 .dm-time{font-size:.68rem;color:#484f58;margin-top:3px;padding-left:12px}
-.gift-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(48,54,61,.5);animation:slideIn .25s;position:relative;overflow:hidden;transition:all .2s}
-.gift-item:hover{background:rgba(255,255,255,.06);transform:translateX(2px)}
+.gift-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(48,54,61,.5);position:relative;overflow:hidden;transition:background .2s}
+.gift-item.gift-item-new{animation:slideIn .25s}
+.gift-item:hover{background:rgba(255,255,255,.06)}
 .gift-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:2px 0 0 2px}
 .gift-item.t-gift::before{background:linear-gradient(180deg,#f0883e,#ff5f00)}
 .gift-item.t-guard::before{background:linear-gradient(180deg,#58a6ff,#0d6efd)}
@@ -1633,7 +1647,7 @@ body{background:linear-gradient(135deg,#0d1117 0%,#161b22 50%,#0d1117 100%);min-
 .qr-close:hover{color:#e6edf3}
 .qr-refresh-btn{background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:6px;padding:7px 18px;font-size:.82rem;cursor:pointer}
 .log-card{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.log-list{list-style:none;overflow-y:auto;padding:10px;background:rgba(13,17,23,.7);border-radius:8px;font-family:'Consolas','Monaco',monospace;font-size:.76rem;line-height:1.6}
+.log-list{list-style:none;overflow-x:hidden;overflow-y:auto;padding:10px;background:rgba(13,17,23,.7);border-radius:8px;font-family:'Consolas','Monaco',monospace;font-size:.76rem;line-height:1.6}
 .log-item{padding:3px 0;border-bottom:1px solid rgba(48,54,61,.3);word-break:break-all}
 .log-item:last-child{border-bottom:none}
 .log-time{color:#6e7681;margin-right:6px}
@@ -1674,8 +1688,7 @@ body{background:linear-gradient(135deg,#0d1117 0%,#161b22 50%,#0d1117 100%);min-
 <div class="container">
 
 <div class="header">
-  <h1><i class="fas fa-gamepad"></i> 阿冰没问题（Icenoproblem）PS5 哔哩哔哩 直播系统</h1>
-  <div class="version">GitHub项目地址：https://github.com/IceNoproblem/PS5BiliDanmaku</div>
+  <h1><i class="fas fa-gamepad"></i> 月七改 - PS5 哔哩哔哩 直播系统</h1>
 </div>
 
 <div class="layout">
@@ -1800,6 +1813,10 @@ body{background:linear-gradient(135deg,#0d1117 0%,#161b22 50%,#0d1117 100%);min-
           <div id="s-sc-cnt" class="stat-val" style="color:#f6c90e">{{ sc_count }}</div>
           <div class="stat-label">醒目留言</div>
         </div>
+      </div>
+      <div id="ps5-clients-detail" style="font-size:.75rem;color:#6e7681;margin:-6px 0 10px;line-height:1.5">
+        <i class="fas fa-info-circle" style="color:#58a6ff;margin-right:4px"></i>
+        <span id="ps5-clients-detail-text">统计 IRC 弹幕连接（TCP 6667），与 RTMP 推流无关；PS5 需处于直播中才会连上</span>
       </div>
       <div style="font-size:.78rem;color:#8b949e;margin-top:10px;padding-top:10px;border-top:1px solid rgba(48,54,61,.5)">
         <i class="fas fa-info-circle" style="color:#58a6ff;margin-right:6px"></i>
@@ -1981,9 +1998,25 @@ function showToast(type, msg) {
   setTimeout(() => t.remove(), 3500);
 }
 
-function renderDmItem(it) {
+const DM_EMPTY_HTML = '<li class="no-item"><i class="fas fa-comment-dots" style="font-size:1.5rem;display:block;margin-bottom:8px;color:#30363d"></i>暂无弹幕记录</li>';
+
+function dmKey(it) {
+  return (it.ts || 0) + '|' + (it.user || '') + '|' + (it.text || '');
+}
+
+function giftKey(it) {
+  return (it.ts || 0) + '|' + (it.type || '') + '|' + (it.user || '') + '|' + (it.name || '') + '|' + (it.text || '') + '|' + (it.num || 0);
+}
+
+function listSig(list, keyFn, limit) {
+  const n = limit || 40;
+  return list.length + '|' + list.slice(0, n).map(keyFn).join(';');
+}
+
+function renderDmItem(it, isNew) {
   const letter = avatarLetter(it.user);
-  return `<li class="dm-item">
+  const cls = isNew ? 'dm-item dm-item-new' : 'dm-item';
+  return `<li class="${cls}" data-key="${esc(dmKey(it))}">
     <div class="dm-avatar">${esc(letter)}</div>
     <div class="dm-body">
       <div class="dm-user">${esc(it.user)}</div>
@@ -1993,27 +2026,84 @@ function renderDmItem(it) {
   </li>`;
 }
 
-function renderDanmakuList() {
-  const ul = $('danmaku-list');
-  console.log('renderDanmakuList: 找到元素', !!ul);
-  if(!ul) return;
-
-  console.log('renderDanmakuList: allDanmaku.length =', allDanmaku.length);
-  if(!allDanmaku.length){
-    ul.innerHTML = '<li class="no-item"><i class="fas fa-comment-dots" style="font-size:1.5rem;display:block;margin-bottom:8px;color:#30363d"></i>暂无弹幕记录</li>';
-    return;
-  }
-
-  const html = allDanmaku.slice(0, 500).map(it => renderDmItem(it)).join('');
-  ul.innerHTML = html;
-  console.log('renderDanmakuList: 已渲染', html.length, '字节');
-
-  if(autoScroll) {
-    ul.scrollTop = 0;
+function trimFeedList(ul, itemSelector, maxItems) {
+  const items = ul.querySelectorAll(itemSelector);
+  for (let i = items.length; i > maxItems; i--) {
+    ul.removeChild(items[items.length - 1]);
   }
 }
 
-function renderGiftItem(it) {
+function renderDanmakuListFull() {
+  const ul = $('danmaku-list');
+  if (!ul) return;
+  if (!allDanmaku.length) {
+    ul.innerHTML = DM_EMPTY_HTML;
+    window._danmakuSig = '';
+    return;
+  }
+  const stickTop = ul.scrollTop < 12;
+  ul.innerHTML = allDanmaku.slice(0, 500).map(it => renderDmItem(it, false)).join('');
+  window._danmakuSig = listSig(allDanmaku, dmKey);
+  if (autoScroll && stickTop) ul.scrollTop = 0;
+}
+
+function syncDanmakuList(incoming) {
+  const ul = $('danmaku-list');
+  if (!ul) return;
+  incoming = incoming || [];
+
+  const sig = listSig(incoming, dmKey);
+  if (sig === window._danmakuSig) return;
+
+  if (!incoming.length) {
+    allDanmaku = [];
+    ul.innerHTML = DM_EMPTY_HTML;
+    window._danmakuSig = '';
+    return;
+  }
+
+  const prevKeys = new Set(allDanmaku.map(dmKey));
+  const cleared = incoming.length < allDanmaku.length;
+  const newItems = [];
+  for (const it of incoming) {
+    const k = dmKey(it);
+    if (!prevKeys.has(k)) newItems.push(it);
+  }
+  allDanmaku = incoming;
+
+  if (cleared || !ul.querySelector('li.dm-item') || newItems.length > 30) {
+    renderDanmakuListFull();
+    return;
+  }
+
+  if (!newItems.length) {
+    window._danmakuSig = sig;
+    return;
+  }
+
+  const stickTop = ul.scrollTop < 12;
+  const prevHeight = ul.scrollHeight;
+  const noItem = ul.querySelector('.no-item');
+  if (noItem) noItem.remove();
+
+  for (let i = newItems.length - 1; i >= 0; i--) {
+    ul.insertAdjacentHTML('afterbegin', renderDmItem(newItems[i], true));
+  }
+  trimFeedList(ul, 'li.dm-item', 500);
+  window._danmakuSig = sig;
+
+  if (autoScroll && stickTop) {
+    ul.scrollTop = 0;
+  } else if (!stickTop) {
+    ul.scrollTop += (ul.scrollHeight - prevHeight);
+  }
+}
+
+function renderDanmakuList() {
+  renderDanmakuListFull();
+}
+
+function renderGiftItem(it, isNew) {
   const t = it.type || 'gift';
   let icon, label, priceHtml = '', extraHtml = '', userPrefix = '';
   const guardColors = ['','guard-1','guard-2','guard-3'];
@@ -2039,7 +2129,8 @@ function renderGiftItem(it) {
     userPrefix = '发送';
   }
 
-  return `<li class="gift-item t-${t}">
+  const cls = isNew ? `gift-item gift-item-new t-${t}` : `gift-item t-${t}`;
+  return `<li class="${cls}" data-key="${esc(giftKey(it))}">
     <div class="gift-icon t-${t}">${icon}</div>
     <div class="gift-body">
       <div class="gift-user">${userPrefix ? `<span style="font-weight:400;color:#6e7681;margin-right:6px">${userPrefix}</span>` : ''}${esc(it.user)}</div>
@@ -2050,21 +2141,20 @@ function renderGiftItem(it) {
   </li>`;
 }
 
-function renderGiftList() {
+function getGiftItemsForTab() {
+  if (currentGiftTab === 'all') return allGift.slice(0, 500);
+  return allGift.filter(it => it.type === currentGiftTab).slice(0, 500);
+}
+
+function renderGiftListFull() {
   const ul = $('gift-list');
-  console.log('renderGiftList: 找到元素', !!ul);
-  if(!ul) return;
+  if (!ul) return;
 
-  console.log('renderGiftList: allGift.length =', allGift.length, 'currentGiftTab =', currentGiftTab);
-  let items = [];
-  if(currentGiftTab === 'all') {
-    items = allGift.slice(0, 500);
-  } else {
-    items = allGift.filter(it => it.type === currentGiftTab).slice(0, 500);
-  }
+  const items = getGiftItemsForTab();
+  const sig = currentGiftTab + '|' + listSig(items, giftKey);
+  if (sig === window._giftViewSig) return;
 
-  console.log('renderGiftList: items.length =', items.length);
-  if(!items.length){
+  if (!items.length) {
     const emptyMsg = {
       'gift': '<i class="fas fa-gift" style="font-size:1.5rem;display:block;margin-bottom:8px;color:#30363d"></i>暂无礼物记录',
       'guard': '<i class="fas fa-anchor" style="font-size:1.5rem;display:block;margin-bottom:8px;color:#30363d"></i>暂无舰长记录',
@@ -2072,17 +2162,29 @@ function renderGiftList() {
       'all': '<i class="fas fa-gift" style="font-size:1.5rem;display:block;margin-bottom:8px;color:#30363d"></i>暂无礼物记录'
     };
     ul.innerHTML = '<li class="no-item">' + (emptyMsg[currentGiftTab] || emptyMsg['all']) + '</li>';
-    console.log('renderGiftList: 显示空消息');
+    window._giftViewSig = sig;
     return;
   }
 
-  const html = items.map(it => renderGiftItem(it)).join('');
-  ul.innerHTML = html;
-  console.log('renderGiftList: 已渲染', html.length, '字节');
+  const stickTop = ul.scrollTop < 12;
+  ul.innerHTML = items.map(it => renderGiftItem(it, false)).join('');
+  window._giftViewSig = sig;
+  if (autoScroll && stickTop) ul.scrollTop = 0;
+}
 
-  if(autoScroll) {
-    ul.scrollTop = 0;
-  }
+function syncGiftList(incoming) {
+  incoming = incoming || [];
+  const sig = listSig(incoming, giftKey);
+  if (sig === window._giftDataSig) return;
+  window._giftDataSig = sig;
+  allGift = incoming;
+  window._giftViewSig = '';
+  renderGiftListFull();
+}
+
+function renderGiftList() {
+  window._giftViewSig = '';
+  renderGiftListFull();
 }
 
 function updateBadges() {
@@ -2120,6 +2222,17 @@ function refreshStatus() {
       $('s-clients').textContent = d.active_clients || 0;
       $('s-clients').className = 'stat-val ' + ((d.active_clients || 0) > 0 ? 'on' : 'off');
     }
+    const detailEl = $('ps5-clients-detail-text');
+    if (detailEl) {
+      const devices = d.ps5_devices || [];
+      if ((d.active_clients || 0) > 0 && devices.length) {
+        detailEl.textContent = '已连接: ' + devices.map(x => (x.nick || '未知') + ' → ' + (x.channel || '')).join('；');
+        detailEl.style.color = '#3fb950';
+      } else {
+        detailEl.textContent = '当前无 PS5 IRC 连接。请确认：PS5 正在直播、DNS 已劫持 irc.twitch.tv / tmi.twitch.tv、本机 6667 端口可达，然后重启 PS5 直播';
+        detailEl.style.color = '#6e7681';
+      }
+    }
     if($('s-dm-cnt')) $('s-dm-cnt').textContent = d.danmaku_count || 0;
     if($('s-gift-cnt')) $('s-gift-cnt').textContent = d.gift_count || 0;
     if($('s-sc-cnt')) $('s-sc-cnt').textContent = d.sc_count || 0;
@@ -2139,14 +2252,10 @@ function refreshStatus() {
     }
 
     if (d.recent_danmaku !== undefined) {
-      allDanmaku = d.recent_danmaku || [];
-      console.log('refreshStatus: 更新弹幕列表', allDanmaku.length, '条');
-      renderDanmakuList();
+      syncDanmakuList(d.recent_danmaku || []);
     }
     if (d.recent_gift !== undefined) {
-      allGift = d.recent_gift || [];
-      console.log('refreshStatus: 更新礼物列表', allGift.length, '条');
-      renderGiftList();
+      syncGiftList(d.recent_gift || []);
     }
 
     updateBadges();
@@ -2155,24 +2264,30 @@ function refreshStatus() {
   });
 }
 
+function setTextIfChanged(el, text) {
+  if (el && el.textContent !== text) el.textContent = text;
+}
+
 function updateRtmpStatus() {
   fetch('/api/rtmp/status').then(r=>r.json()).then(d=>{
-    console.log('updateRtmpStatus: 接收到数据', d);
     if(!d) return;
 
     // 更新徽章
     const badge = $('rtmp-badge');
     if(badge) {
-      if(d.active) {
-        badge.textContent = '推流中';
-        badge.style.background = 'rgba(63,185,80,.14)';
-        badge.style.color = '#3fb950';
-        badge.style.border = '1px solid #238636';
-      } else {
-        badge.textContent = '未推流';
-        badge.style.background = '#30363d';
-        badge.style.color = '#8b949e';
-        badge.style.border = '1px solid #30363d';
+      const active = !!d.active;
+      const nextText = active ? '推流中' : '未推流';
+      if (badge.textContent !== nextText) {
+        badge.textContent = nextText;
+        if(active) {
+          badge.style.background = 'rgba(63,185,80,.14)';
+          badge.style.color = '#3fb950';
+          badge.style.border = '1px solid #238636';
+        } else {
+          badge.style.background = '#30363d';
+          badge.style.color = '#8b949e';
+          badge.style.border = '1px solid #30363d';
+        }
       }
     }
 
@@ -2202,8 +2317,9 @@ function updateRtmpStatus() {
     fields.forEach(field => {
       const el = $(`rtmp-${field}`);
       if(el) {
-        el.textContent = displayNames[field];
-        el.className = 'rtmp-info-value ' + (d.active && displayNames[field] !== '-' ? 'active' : 'inactive');
+        setTextIfChanged(el, displayNames[field]);
+        const cls = 'rtmp-info-value ' + (d.active && displayNames[field] !== '-' ? 'active' : 'inactive');
+        if (el.className !== cls) el.className = cls;
       }
     });
 
@@ -2243,13 +2359,19 @@ function clearRecords(type) {
     if (d.code === 0) {
       if(target === 'danmaku') {
         allDanmaku = [];
+        window._danmakuSig = '';
         renderDanmakuList();
       } else if(target === 'gift') {
         allGift = [];
+        window._giftDataSig = '';
+        window._giftViewSig = '';
         renderGiftList();
       } else {
         allDanmaku = [];
         allGift = [];
+        window._danmakuSig = '';
+        window._giftDataSig = '';
+        window._giftViewSig = '';
         renderDanmakuList();
         renderGiftList();
       }
@@ -2398,14 +2520,24 @@ function refreshLogs() {
   });
 }
 
+function logKey(log) {
+  return (log.time || '') + '|' + (log.level || '') + '|' + (log.msg || '');
+}
+
 function renderLogs(logs) {
   const ul = $('log-list');
   if(!ul) return;
+
+  logs = logs || [];
+  const sig = listSig(logs, logKey, 60);
+  if (sig === window._logSig) return;
+  window._logSig = sig;
 
   if(!logs.length){
     ul.innerHTML = '<li class="no-item" style="padding:20px;font-size:.78rem"><i class="fas fa-clock" style="margin-right:6px"></i>暂无日志</li>';
     return;
   }
+  const stickTop = ul.scrollTop < 12;
   const html = logs.map(log=>{
     const level = log.level||'info';
     const levelClass = level==='error'?'error':level==='warning'?'warning':level==='success'?'success':'info';
@@ -2416,6 +2548,7 @@ function renderLogs(logs) {
     </li>`;
   }).join('');
   ul.innerHTML = html;
+  if (stickTop) ul.scrollTop = 0;
 }
 
 function loadRoomHistory() {
@@ -2603,10 +2736,15 @@ def start_web(irc_server):
         if _GLOBAL_BILI_CLIENT:
             real_room_id = _GLOBAL_BILI_CLIENT.real_room_id
 
+        ps5_devices = [
+            {"nick": v.get("nick") or "未知", "channel": v.get("channel", ""), "since": v.get("since", 0)}
+            for v in IRC_CLIENT_INFO.values()
+        ]
         return jsonify({
             "irc_running": IRC_RUNNING,
             "ws_running": WS_RUNNING,
             "active_clients": len(ACTIVE_CONNECTIONS),
+            "ps5_devices": ps5_devices,
             "danmaku_count": DANMAKU_COUNT,
             "gift_count": GIFT_COUNT,
             "guard_count": GUARD_COUNT,
