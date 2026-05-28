@@ -1,5 +1,8 @@
+# PS5 哔哩哔哩弹幕 + RTMP 推流（danmaku-v2）
+# 启动: docker compose up -d --build
+
 services:
-  # B站弹幕转发服务（无deploy/resources，无报错）
+  # B站弹幕转发 + Web 管理
   ps5-bilibili-danmaku:
     build: .
     image: ps5-danmaku:v2
@@ -21,8 +24,20 @@ services:
       - URLLIB3_LOG_LEVEL=CRITICAL
       - LOG_LEVEL=INFO
       - TZ=Asia/Shanghai
+      - DOCKER_ENV=true
+      - RTMP_SERVER_HOST=ps5living
+      - RTMP_SERVER_PORT=1935
+    depends_on:
+      ps5living:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-s", "--max-time", "3", "http://localhost:5000/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
-  # ps5living服务推流
+  # bao3/playstation RTMP 中继（PS5 推流 → 可转发 B 站）
   ps5living:
     image: bao3/playstation
     container_name: ps5living-bao3
@@ -32,10 +47,43 @@ services:
     volumes:
       - ./data/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "17890:80/tcp"
-      - "1935:1935/tcp"
+      - "17890:80/tcp"    # RTMP 统计 / 状态页（宿主机）
+      - "1935:1935/tcp"   # RTMP 推流
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --timeout=3 http://127.0.0.1:80/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
-  # DNS重定向与Web管理
+  # RTMP 推流监控 → 写入 Web 面板
+  rtmp-monitor:
+    build: .
+    image: ps5-danmaku:v2
+    container_name: ps5-rtmp-monitor
+    restart: unless-stopped
+    command: ["python", "monitor_rtmp.py"]
+    # 调试: command: ["python", "monitor_rtmp_debug.py"]
+    depends_on:
+      ps5living:
+        condition: service_healthy
+      ps5-bilibili-danmaku:
+        condition: service_healthy
+    environment:
+      - DOCKER_ENV=true
+      - TZ=Asia/Shanghai
+      - LOG_LEVEL=INFO
+      - RTMP_SERVER_TYPE=playstation
+      - RTMP_MONITOR_URL=http://ps5living:80
+      - DANMAKU_API_URL=http://ps5-bilibili-danmaku:5000/api/rtmp/status/update
+      - CHECK_INTERVAL=2
+      - DEBUG_MODE=false
+      - HTML_OUTPUT_FILE=/app/debug_output/debug_playstation.html
+    volumes:
+      - ./logs:/app/logs
+      - ./debug_output:/app/debug_output
+
+  # DNS 重定向（PS5 RTMP / Twitch IRC → 本机）
   dnsmasq:
     image: jpillora/dnsmasq
     container_name: ps5living-dnsmasq
@@ -43,8 +91,12 @@ services:
     volumes:
       - ./data/dnsmasq.conf:/etc/dnsmasq.conf:ro
     ports:
-      - "53:53/udp"     # 只在宿主机局域网IP上监听DNS
-      - "18081:8080/tcp" # Web管理界面也只对局域网开放
+      - "53:53/udp"
+      - "18081:8080/tcp"
     environment:
       - HTTP_USER=ytq
       - HTTP_PASS=123456
+
+networks:
+  default:
+    driver: bridge

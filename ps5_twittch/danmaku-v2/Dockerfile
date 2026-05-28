@@ -21,8 +21,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 COPY danmaku_forward.py .
+COPY monitor_rtmp.py .
+COPY monitor_rtmp_debug.py .
 
-RUN mkdir -p /app/logs && chmod 777 /app/logs
+RUN mkdir -p /app/logs /app/debug_output && chmod 777 /app/logs /app/debug_output
 
 EXPOSE 5000 17667
 

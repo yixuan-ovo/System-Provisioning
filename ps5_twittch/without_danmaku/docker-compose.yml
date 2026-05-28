@@ -1,0 +1,27 @@
+services:
+  # ps5living服务推流
+  ps5living:
+    image: bao3/playstation
+    container_name: ps5living-bao3
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./data/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "17890:80/tcp"
+      - "1935:1935/tcp"
+
+  # DNS重定向与Web管理
+  dnsmasq:
+    image: jpillora/dnsmasq
+    container_name: ps5living-dnsmasq
+    restart: always
+    volumes:
+      - ./data/dnsmasq.conf:/etc/dnsmasq.conf:ro
+    ports:
+      - "53:53/udp"
+      - "18081:8080/tcp"
+    environment:
+      - HTTP_USER=ytq
+      - HTTP_PASS=123456
