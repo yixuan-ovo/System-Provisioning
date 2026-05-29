@@ -59,7 +59,7 @@ services:
 
   # RTMP 推流监控 → 写入 Web 面板
   rtmp-monitor:
-    build: .
+    # build: .
     image: ps5-danmaku:v2
     container_name: ps5-rtmp-monitor
     restart: unless-stopped
